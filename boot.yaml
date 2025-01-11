@@ -1,0 +1,20 @@
+# boot.yaml
+gin:
+  - name: darkoo
+    port: 3000
+    enabled: true
+    commonService:
+      enabled: true
+    sw:
+      enabled: true
+    docs:
+      enabled: true
+    prom:
+      enabled: true
+    middleware:
+      logging:
+        enabled: true
+      prom:
+        enabled: true
+      
+    

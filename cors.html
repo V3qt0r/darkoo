@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h1>CORS Test</h1>
+
+<p>Call http://localhost:8080/v1/greeter</p>
+
+<script type="text/javascript">
+    window.onload = function() {
+        var apiUrl = 'http://localhost:8080/api/user/login';
+        fetch(apiUrl).then(response => response.json()).then(data => {
+            document.getElementById("res").innerHTML = data["message"]
+        }).catch(err => {
+            document.getElementById("res").innerHTML = err
+        });
+    };
+
+    var createCORSRequest = function(method, url) {
+  var xhr = new XMLHttpRequest();
+  if ("withCredentials" in xhr) {
+    // Most browsers.
+    xhr.open(method, url, true);
+  } else if (typeof XDomainRequest != "undefined") {
+    // IE8 & IE9
+    xhr = new XDomainRequest();
+    xhr.open(method, url);
+  } else {
+    // CORS not supported.
+    xhr = null;
+  }
+  return xhr;
+};
+
+var url = 'http://localhost:8080/api/user/login';
+var method = 'POST';
+var xhr = createCORSRequest(method, url);
+
+xhr.onload = function() {
+  // Success code goes here.
+};
+
+xhr.onerror = function() {
+  // Error code goes here.
+};
+
+xhr.send();
+</script>
+
+<h4>Response: </h4>
+<p id="res"></p>
+
+</body>
+</html>

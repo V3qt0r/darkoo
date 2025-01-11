@@ -1,0 +1,6 @@
+.env
+.vscode
+.idea
+__debug_bin
+prod-ca-2021.crt
+fly.toml
