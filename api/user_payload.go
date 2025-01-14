@@ -12,7 +12,7 @@ import (
 type RegisterPayload struct {
 	Email 		string 	`json:"email"`
 	Password 	string	`json:"password"`
-	IsAbove18 	bool		`json:"isAbove18"`
+	IsAbove18 	bool	`json:"isAbove18"`
 }
 
 

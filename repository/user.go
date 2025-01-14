@@ -22,15 +22,27 @@ func NewUserRepository(db *gorm.DB) models.IUserRepository {
 	return &userRepository{ DB: db,}
 }
 
-
 func (r *userRepository) RegisterUser(user *models.User) (*models.User, error) {
-	if result := r.DB.Create(&user); result.Error != nil {
-		log.Printf("Could not register user with email: %s. %v\n", user.Email, result.Error)
-		return nil, apperrors.NewAuthorization("Could not register user")
+	// Check if the email is already in use
+	var existingUser models.User
+	if err := r.DB.Where("email = ?", user.Email).First(&existingUser).Error; err == nil {
+		log.Printf("Email already in use: %s\n", user.Email)
+		return nil, apperrors.NewBadRequest("Email is already in use")
+	} else if err != gorm.ErrRecordNotFound {
+		log.Printf("Error checking existing email: %s. %v\n", user.Email, err)
+		return nil, apperrors.NewInternal()
 	}
+
+	// Attempt to create the new user
+	if err := r.DB.Create(&user).Error; err != nil {
+			log.Printf("Duplicate key error: Could not create user with email %v. Reason: %v\n", user.Email, err.Error)
+			return nil, apperrors.NewInternal()
+	}
+
 
 	return user, nil
 }
+
 
 
 func (r *userRepository) JoinGroup(userId, groupId int) error {

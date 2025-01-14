@@ -16,7 +16,7 @@ type OTPType string
 
 type User struct {
 	Base
-	UserName 		string		 `json:"userName" gorm:"unique"`
+	UserName 		string		 `json:"userName"`
 	Email			string		 `json:"email" gorm:"unique"`
 	Password 		string   	 `json:"-"`
 	Gender          string       `json:"gender"`
