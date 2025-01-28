@@ -3,7 +3,6 @@ package repository
 import (
 	"darkoo/models"
 	"darkoo/apperrors"
-	"darkoo/websocket"
 
 	"log"
 
@@ -50,8 +49,6 @@ func (r *messageRepository) SendMessage(message *models.Message) (*models.Messag
 		log.Print("Could not send message")
 		return nil, apperrors.NewInternal()
 	}
-
-	websocket.Hub.Broadcast <- message
 
 	return message, nil
 }

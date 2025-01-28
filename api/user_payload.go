@@ -12,13 +12,16 @@ import (
 type RegisterPayload struct {
 	Email 		string 	`json:"email"`
 	Password 	string	`json:"password"`
-	IsAbove18 	bool	`json:"isAbove18"`
+	UserName    string  `json:"userName"`
+	Gender      string  `json:"gender"`
+ 	IsAbove18 	bool	`json:"isAbove18"`
 }
 
 
 func (p RegisterPayload) Sanitize() {
 	p.Email = strings.TrimSpace(p.Email)
 	p.Email = strings.ToLower(p.Email)
+	p.Gender = strings.TrimSpace(p.Gender)
 }
 
 
@@ -27,6 +30,8 @@ func (p RegisterPayload) Validate() error {
 		validation.Field(&p.Email, validation.Required, is.EmailFormat),
 		validation.Field(&p.Password, validation.Required, validation.Length(6, 150),),		
 		validation.Field(&p.IsAbove18, validation.Required, validation.In(true).Error("You must be above 18 to register")),
+		validation.Field(&p.UserName, validation.Length(3, 15)),
+		validation.Field(&p.UserName, validation.Required),
 	)
 }
 

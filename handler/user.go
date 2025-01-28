@@ -1,14 +1,14 @@
-package handler 
+package handler
 
 import (
-	"net/http"
 	"log"
+	"net/http"
 	"strconv"
 
 	"darkoo/api"
+	"darkoo/apperrors"
 	"darkoo/middleware"
 	"darkoo/models"
-	"darkoo/apperrors"
 
 	"github.com/gin-gonic/gin"
 )
@@ -37,6 +37,8 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 	registerUserPayload := &models.User{
 		Email: 		request.Email,
 		Password: 	request.Password,
+		Gender:     request.Gender,
+		UserName:   request.UserName,
 	}
 
 	user, err := h.userService.RegisterUser(registerUserPayload)
@@ -60,7 +62,13 @@ func (h *UserHandler) GetUserById(c *gin.Context) {
 
 
 func (h *UserHandler) GetLoggedInUser(c *gin.Context) {
-	userDetails, _ := c.Get("id")
+	userDetails, err := c.Get("id")
+
+	if !err {
+		log.Print("Error authenticating user")
+		c.JSON(http.StatusInternalServerError, api.NewResponse(http.StatusInternalServerError, "User not authenticated", nil))
+		return
+	}
 
 	if userDetails == nil {
 		log.Print("User not authenticated")
@@ -317,6 +325,74 @@ func (h *UserHandler) DisableTOTP(c *gin.Context) {
 	if err != nil {
 		e := apperrors.GetAppError(err, "Cannot disable totp, please try again")
 		c.JSON(e.Status(), api.NewResponse(e.Status(), e.Error(), nil))
+		return
+	}
+
+	c.JSON(http.StatusOK, api.NewResponse(http.StatusOK, "Successful", nil))
+}
+
+
+func (h *UserHandler) UpdateUserImageNum(c *gin.Context) {
+	userDetails, _ := c.Get("id")
+	if userDetails == nil {
+		log.Print("Error getting user details")
+		c.JSON(http.StatusInternalServerError, api.NewResponse(http.StatusInternalServerError, 
+			"Error getting user details", nil))
+		return
+	}
+	userId := userDetails.(*middleware.User).ID
+
+	var request map[string] interface{}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		log.Print("Invalid image payload")
+		c.JSON(http.StatusBadRequest, api.NewResponse(http.StatusBadRequest, "Invalid image payload", nil))
+		return
+	}
+
+	num, ok := request["num"].(float64)
+	log.Print(num)
+	if !ok || num < 0 {
+		log.Print("Invalid or missing amount")
+		c.JSON(http.StatusBadRequest, api.NewResponse(http.StatusBadRequest, "Invalid or missing Amount", nil))
+		return
+	}
+
+	number, err := h.userService.UpdateUserImageNum(int(userId), int(num));
+
+	if err != nil {
+		log.Print("Cannot update user image number")
+		e := apperrors.GetAppError(err, "Cannot update user image number")
+		c.JSON(e.Status(), api.NewResponse(e.Status(), e.Error(), nil))
+		return
+	}
+
+	c.JSON(http.StatusOK, api.NewResponse(http.StatusOK, "Successful", number))
+}
+
+
+
+
+func (h *UserHandler) JoinGroup(c *gin.Context) {
+	userDetails, _ := c.Get("id");
+
+	if userDetails == nil {
+		log.Print("Error getting user details")
+		c.JSON(http.StatusInternalServerError, api.NewResponse(http.StatusInternalServerError, 
+			"Error getting user details", nil))
+		return
+	}
+
+	id := c.Param("id")
+
+	groupId, _ := strconv.Atoi(id) 
+	userId := userDetails.(*middleware.User).ID
+
+	err := h.userService.JoinGroup(int(userId), groupId)
+
+	if err != nil {
+		log.Print("Join group unsuccessful")
+		c.JSON(http.StatusBadRequest, api.NewResponse(http.StatusBadRequest, "Unable to join group", nil))
 		return
 	}
 

@@ -10,6 +10,7 @@ import (
 	services "darkoo/services"
 	"darkoo/websocket"
 
+
 	dhandlers "darkoo/handler"
 	ddb "darkoo/datasources"
 
@@ -93,6 +94,7 @@ func main() {
 	userGroup.POST("/one-time-login", jwtMiddleware.LoginHandler)
 	userGroup.POST("/send-onetime-password", userHandler.SendOneTimePassword)
 	userGroup.POST("/logout", jwtMiddleware.LogoutHandler)
+	
 
 	userAuthRoutes := ginEngine.Group("/api/users").Use(jwtMiddleware.MiddlewareFunc())
 	userAuthRoutes.GET("/:id", userHandler.GetUserById)
@@ -104,6 +106,9 @@ func main() {
 	userAuthRoutes.POST("/enroll/totp", userHandler.EnrollTOTP)
 	userAuthRoutes.POST("/verify/totp", userHandler.VerifyTOTP)
 	userAuthRoutes.POST("/disable/totp", userHandler.DisableTOTP)
+	userAuthRoutes.GET("/self", userHandler.GetLoggedInUser)
+	userAuthRoutes.PUT("/image-num", userHandler.UpdateUserImageNum)
+	userAuthRoutes.PUT("/join-group/:id", userHandler.JoinGroup)
 
 
 	groupGroup := ginEngine.Group("/api/groups").Use(jwtMiddleware.MiddlewareFunc())
@@ -124,10 +129,26 @@ func main() {
 	messageGroup.PUT("/:id", messageHandler.UpdateMessage)
 	messageGroup.GET("/:id", messageHandler.GetMessageById)
 
-	go websocket.Hub.Run()
-	ginEngine.GET("/ws/:group_id", dhandlers.WebSocketHandler)
+	hub := websocket.NewHub(messageService, userService)
+	go hub.Start()
+
+	// Register WebSocket endpoint using gin
+	ginEngine.GET("/ws", func(c *gin.Context) {
+		// Extract user ID and group ID from the request
+		userID := c.MustGet("id").(string) // Assuming you've set it in middleware
+		groupID := c.DefaultQuery("groupId", "")
+
+		if userID == "" || groupID == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "userId and groupId are required"})
+			return
+		}
+
+		// Pass the user ID and group ID to the WebSocket handler
+		websocket.HandleWebSocket(hub, c.Writer, c.Request)
+	})
+
 
 
 	ginEngine.Run(":" + os.Getenv("PORT"))
-
+		
 }

@@ -1,65 +1,67 @@
 package websocket
 
 import (
-	"github.com/gorilla/websocket"
-	"sync"
+	"log"
 	"darkoo/models"
+
+	"encoding/json"
 )
 
-type WebSocketHub struct {
-	Groups 		map[uint]map[*websocket.Conn]bool
-	Register 	chan *Client
-	Unregister 	chan *Client
-	Broadcast 	chan *models.Message
-	mu sync.Mutex
+// Hub manages active WebSocket clients and broadcasts messages
+type Hub struct {
+	Clients    map[string]*Client      // A map of client IDs to clients
+	Register   chan *Client            // Channel to register new clients
+	Unregister chan *Client           // Channel to unregister clients
+	Broadcast  chan []byte            // Channel for broadcasting messages to all clients
+	MessageService models.IMessageService
+	UserService	   models.IUserService             // Interface to interact with the database
 }
 
-type Client struct {
-	Conn 	*websocket.Conn
-	GroupId uint
-}
-
-var Hub = &WebSocketHub{Groups: make(map[uint]map[*websocket.Conn]bool),
-	Register: 	make(chan *Client),
-	Unregister: make(chan *Client),
-	Broadcast: 	make(chan *models.Message),
-}
-
-func (h *WebSocketHub) Run() {
-	for {
-		select {
-		case client := <-h.Register:
-			h.mu.Lock()
-			if _, ok := h.Groups[client.GroupId]; !ok {
-				h.Groups[client.GroupId] = make(map[*websocket.Conn]bool)
-			}
-		h.Groups[client.GroupId][client.Conn] = true
-		h.mu.Unlock()
-		case client := <-h.Unregister:
-			h.mu.Lock()
-			if _, ok := h.Groups[client.GroupId]; ok {
-				if _, ok := h.Groups[client.GroupId][client.Conn]; ok {
-						delete(h.Groups[client.GroupId], client.Conn)
-						client.Conn.Close()
-				}
-			if len(h.Groups[client.GroupId]) == 0 {
-				delete(h.Groups, client.GroupId)
-			}
-		} 
-
-		h.mu.Unlock()
-		
-		case message := <-h.Broadcast: 
-		h.mu.Lock()
-			if clients, ok := h.Groups[message.GroupId]; ok {
-				for conn := range clients {
-					if err := conn.WriteJSON(message); err != nil {
-						conn.Close()
-						delete(clients, conn)
-					}
-				}
-			}
-			h.mu.Unlock()
-		}
+// NewHub creates a new instance of Hub
+func NewHub(messageService models.IMessageService, userService models.IUserService) *Hub {
+	return &Hub{
+		Clients:    make(map[string]*Client),
+		Register:   make(chan *Client),
+		Unregister: make(chan *Client),
+		Broadcast:  make(chan []byte),
+		MessageService: messageService,  // Pass the concrete implementation
+		UserService:    userService,     // Pass the concrete implementation
 	}
 }
+
+// Start runs the Hub's main loop, listening for Register, Unregister, and Broadcast events
+func (h *Hub) Start() {
+    for {
+        select {
+        case client := <-h.Register:
+            // Register a new client
+            h.Clients[client.ID] = client
+            log.Printf("New client registered: %s", client.ID)
+
+        case client := <-h.Unregister:
+            // Unregister a client
+            delete(h.Clients, client.ID)
+            log.Printf("Client unregistered: %s", client.ID)
+
+        case message := <-h.Broadcast:
+            // Broadcast the message to all clients in the same group
+            var msg Message
+            if err := json.Unmarshal(message, &msg); err != nil {
+                log.Printf("Invalid broadcast message: %v", err)
+                continue
+            }
+
+            for _, client := range h.Clients {
+                if client.Group == msg.GroupID { // Send only to clients in the same group
+                    select {
+                    case client.Send <- message:
+                    default:
+                        close(client.Send)
+                        delete(h.Clients, client.ID)
+                    }
+                }
+            }
+        }
+    }
+}
+

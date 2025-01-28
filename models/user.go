@@ -22,6 +22,7 @@ type User struct {
 	Gender          string       `json:"gender"`
 	Groups 			[]Group		 `gorm:"many2many:user_groups"`
 	Messages  		[]Message	 `gorm:"constraint:OnUpdate:CASCADE, OnDelete:SET NULL"`
+	ImageNum		int 		 `json:"image"`
 	Ban 			bool  		 `json:"ban" gorm:"type:bool;default:false"`
 	TotpEnabled     bool  		 `json:"totpEnabled" gorm:"type:bool;default:false"`
 	TotpSecret      string 		 `json:"_"`
@@ -44,6 +45,7 @@ type IUserRepository interface {
 	UpdateUserTOTP(user User, totpSecret string, totpEnabled bool) error
 	UpdateUser(user User) error
 	UpdatePassword(userId int, password string) error
+	UpdateUserImageNum(userId, num int) (int, error)
 }
 
 
@@ -64,6 +66,9 @@ type IUserService interface {
 	EnrollTOTP(userId int) ([]byte, error)
 	VerifyTOTP(userId int, verifyTOTP VerifyTOTPRequest) error
 	DisableTOTP(userId int) error
+	UpdateUserImageNum(userId, num int) (int, error)
+	JoinGroup(userId, groupId int) error
+	// LeaveGroup(userId, groupId int) error
 }
 
 

@@ -229,6 +229,22 @@ func (r *userRepository) UpdateUser(user models.User) error {
 	return nil
 }
 
+func (r *userRepository) UpdateUserImageNum(userId, num int) (int, error) {
+	foundUser, _ := r.GetUserById(userId)
+
+	if foundUser == nil {
+		log.Printf("Could not find user with ID: %d", int(userId))
+		return 0, apperrors.NewBadRequest("Could not find user with provided ID")
+	}
+
+	if err := r.DB.Model(&foundUser).Updates(models.User{ImageNum: num}).Error; err != nil {
+		log.Print("Could not update user")
+		return 0, apperrors.NewBadRequest("Could not update user")
+	}
+
+	return num, nil
+}
+
 
 func (r *userRepository) UpdatePassword(userId int, password string) error {
 	foundUser, _ := r.GetUserById(userId)

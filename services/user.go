@@ -1,8 +1,8 @@
 package services
 
 import (
-	"darkoo/models"
 	"darkoo/apperrors"
+	"darkoo/models"
 	"darkoo/utils"
 
 	"log"
@@ -331,6 +331,25 @@ func (s *userService) DisableTOTP(userId int) error {
 	if err != nil {
 		log.Print("Unable to disable user totp. Please try again.")
 		return apperrors.NewBadRequest("Unable to disable user totp. Please try again.")
+	}
+
+	return nil
+}
+
+
+
+func (s *userService) UpdateUserImageNum(userId, num int) (int, error){
+	return s.UserRepository.UpdateUserImageNum(userId, num);
+}
+
+
+
+func (s *userService) JoinGroup(userId, groupId int) error {
+	err := s.UserRepository.JoinGroup(userId, groupId)
+
+	if err != nil {
+		log.Print("Could not join group")
+		return apperrors.NewBadRequest("Could not join group")
 	}
 
 	return nil
